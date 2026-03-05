@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tebak Kata Ultimate</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif}
+body{
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  height:100vh;width:100vw;
+  display:flex;justify-content:center;align-items:center;
+  overflow:hidden;color:white;
+}
+
+/* LOADING */
+#loading{
+  position:absolute;inset:0;background:#000;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  z-index:10;
+}
+.loader{
+  width:70px;height:70px;border:7px solid #333;
+  border-top:7px solid #00ffcc;border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* GAME */
+#game{
+  width:100vw;height:100vh;
+  padding:20px 15px;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+
+h1{text-align:center;font-size:28px;letter-spacing:2px}
+
+/* GRID */
+/* GRID FIX */
+.grid{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  margin:20px 0;
+}
+
+/* ROW FIX */
+.row{
+  display:grid;
+  gap:10px;
+  width:100%;
+  max-width:420px;   /* biar gak kepanjangan */
+}
+
+/* BOX FIX STABIL */
+.box{
+  width:100%;
+  aspect-ratio:1;
+  background:#111;
+  border:2px solid #555;
+  border-radius:14px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:26px;
+  font-weight:bold;
+  transition:0.2s;
+}
+
+/* WARNA */
+.green{background:#16c784!important;border:none}
+.yellow{background:#f4b400!important;border:none}
+.red{background:#e74c3c!important;border:none}
+
+/* ANIMASI */
+.flip{animation:flip 0.4s}
+@keyframes flip{
+  0%{transform:rotateX(0)}
+  50%{transform:rotateX(90deg)}
+  100%{transform:rotateX(0)}
+}
+.shake{animation:shake 0.4s}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-6px)}
+  75%{transform:translateX(6px)}
+}
+.pop{animation:pop 0.15s}
+@keyframes pop{
+  0%{transform:scale(1)}
+  50%{transform:scale(1.2)}
+  100%{transform:scale(1)}
+}
+
+/* KEYBOARD */
+.keyboard{display:flex;flex-direction:column;gap:8px}
+.keyrow{display:flex;justify-content:center;gap:6px}
+.key{
+  flex:1;height:54px;
+  background:#222;border-radius:12px;
+  display:flex;justify-content:center;align-items:center;
+  font-size:18px;font-weight:bold;
+  transition:0.15s;
+}
+.key.wide{flex:1.5}
+.key:active{transform:scale(0.92)}
+
+/* RESULT */
+#resultScreen{
+  position:absolute;inset:0;
+  background:rgba(0,0,0,0.9);
+  display:none;flex-direction:column;
+  justify-content:center;align-items:center;
+  text-align:center;
+}
+#resultScreen button{
+  margin-top:15px;padding:12px 25px;
+  border:none;border-radius:10px;
+  background:#00ffcc;font-weight:bold;
+}
+.confetti{
+  position:absolute;width:8px;height:8px;
+  animation:fall 2s linear forwards;
+}
+@keyframes fall{
+  to{transform:translateY(100vh) rotate(720deg);opacity:0}
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loader"></div>
+  <p>Loading...</p>
+</div>
+
+<div id="game" style="display:none">
+  <h1>TEBAK KATA</h1>
+  <div id="grid" class="grid"></div>
+  <div id="keyboard" class="keyboard"></div>
+</div>
+
+<div id="resultScreen">
+  <h2 id="resultText"></h2>
+  <p id="rewardText"></p>
+  <button onclick="startGame()">Main Lagi</button>
+</div>
+
+<script>
+
+/* ===== KATA DASAR ===== */
+const words = [
+"api","air","abu","awan","akar","anak","asam","asap","arus","ayam",
+"batu","baca","baik","baru","beli","besar","bisa","buku","bulan",
+"cari","cinta","cium","coba","curi",
+"dalam","damai","datang","depan","duduk","dunia",
+"emas","empat","erat","gagal","gajah","garam",
+"hidup","hujan","indah","ingat","jalan","jatuh",
+"kabar","kaca","kamar","kata","keras","kerja",
+"lama","lapar","lawan","layar","makan","malam",
+"minum","naik","nama","obat","olah","orang",
+"pikir","pintu","putih","rindu","rumah","rumit",
+"sabar","sakit","sehat","senang","suara","sulit",
+"tahan","tajam","takut","tanah","tanya","tepat",
+"tidur","tikus","tugas","tulis","turun",
+"uang","ulang","umum","untung","usaha","atom","ion","sel","gen","dna","rna","enzim","virus","bakteri",
+"plasma","neuron","reaksi","logika","teori","etika",
+"fisika","kimia","biologi","astron","galaksi","nebula",
+"proton","elektron","neutron","analisis","metode",
+"hipotesis","deduksi","induksi","variabel","fungsi",
+"matrix","tensor","vektor","energi","gravitasi",
+"radiasi","isotop","molekul","organik","ekologi",
+"evolusi","genetik","mutasi","protein","planet",
+"orbit","rotasi","revolusi","sky","sun","moon","star","earth","stone","water","fire","wind",
+"light","dark","power","brain","logic","dream",
+"storm","flash","cloud","space","void","pulse",
+"pixel","code","stack","array","debug","alpha","omega",
+"vector","matrix","signal","fusion","vision","future",
+"silent","shadow","bright","boost","hyper","prime",
+"speed","force","laser","cyber","neon","robot","drone",
+    "bio","astro","neo","nano","micro","macro","ultra","infra",
+    "quant","cyber","meta","proto","hyper","electro","chrono",
+    "psy","philo","hydro","aero","geo","thermo","crypt",
+    "dark","light","super","mega","ultra","omega","alpha",
+    "tron","gen","core","flux","zone","bit","plex",
+    "max","min","sys","lab","nova","dex","tek",
+    "logic","matrix","verse","craft","storm","wave",
+    "ion","is","us","or","ex","um","ix","ar","on","a","os","ium"
+  ];
+
+
+let answer="",rows=7,wordLength=0,currentRow=0,currentCol=0,keyStates={};
+const grid=document.getElementById("grid");
+const keyboard=document.getElementById("keyboard");
+
+setTimeout(()=>{
+  document.getElementById("loading").style.display="none";
+  document.getElementById("game").style.display="flex";
+  startGame();
+},1200);
+
+function startGame(){
+  document.getElementById("resultScreen").style.display="none";
+  grid.innerHTML="";
+  keyboard.innerHTML="";
+  currentRow=0;
+  currentCol=0;
+  keyStates={};
+
+  answer = words[Math.floor(Math.random() * words.length)];
+  wordLength = answer.length;
+
+  // 🔥 Atur jumlah baris biar gak kepanjangan
+  if(wordLength <= 4) rows = 6;
+  else if(wordLength <= 6) rows = 7;
+  else rows = 8;
+
+  for(let r=0;r<rows;r++){
+    const row=document.createElement("div");
+    row.className="row";
+    row.style.gridTemplateColumns=`repeat(${wordLength},1fr)`;
+
+    for(let c=0;c<wordLength;c++){
+      const box=document.createElement("div");
+      box.className="box";
+      row.appendChild(box);
+    }
+
+    grid.appendChild(row);
+  }
+
+  createKeyboard();
+}
+
+function createKeyboard(){
+  const layout=["QWERTYUIOP","ASDFGHJKL","ZXCVBNM"];
+  layout.forEach(line=>{
+    const row=document.createElement("div");
+    row.className="keyrow";
+    line.split("").forEach(letter=>{
+      const key=document.createElement("div");
+      key.className="key";
+      key.textContent=letter;
+      key.onclick=()=>handleKey(letter);
+      row.appendChild(key);
+    });
+    keyboard.appendChild(row);
+  });
+
+  const bottom=document.createElement("div");
+  bottom.className="keyrow";
+
+  const enter=document.createElement("div");
+  enter.className="key wide";enter.textContent="ENTER";
+  enter.onclick=checkWord;
+
+  const del=document.createElement("div");
+  del.className="key wide";del.textContent="⌫";
+  del.onclick=deleteLetter;
+
+  bottom.appendChild(enter);bottom.appendChild(del);
+  keyboard.appendChild(bottom);
+}
+
+function handleKey(letter){
+  if(currentCol<wordLength){
+    const box=grid.children[currentRow].children[currentCol];
+    box.textContent=letter;
+    box.classList.add("pop");
+    currentCol++;
+  }
+}
+
+function deleteLetter(){
+  if(currentCol>0){
+    currentCol--;
+    grid.children[currentRow].children[currentCol].textContent="";
+  }
+}
+
+function checkWord(){
+  if(currentCol<wordLength){
+    grid.children[currentRow].classList.add("shake");
+    setTimeout(()=>grid.children[currentRow].classList.remove("shake"),400);
+    return;
+  }
+
+  const row=grid.children[currentRow];
+  let guess="";
+  for(let i=0;i<wordLength;i++)
+    guess+=row.children[i].textContent.toLowerCase();
+
+  let answerArr=answer.split("");
+  let result=new Array(wordLength).fill("red");
+
+  for(let i=0;i<wordLength;i++){
+    if(guess[i]===answer[i]){
+      result[i]="green";
+      answerArr[i]=null;
+    }
+  }
+  for(let i=0;i<wordLength;i++){
+    if(result[i]!=="green" && answerArr.includes(guess[i])){
+      result[i]="yellow";
+      answerArr[answerArr.indexOf(guess[i])]=null;
+    }
+  }
+
+  for(let i=0;i<wordLength;i++){
+    setTimeout(()=>{
+      row.children[i].classList.add(result[i],"flip");
+      updateKeyboard(guess[i],result[i]);
+    },i*250);
+  }
+
+  if(guess===answer){
+    setTimeout(winGame,wordLength*300);
+    return;
+  }
+
+  currentRow++;currentCol=0;
+  if(currentRow===rows)
+    setTimeout(loseGame,wordLength*300);
+}
+
+function updateKeyboard(letter,color){
+  const priority={green:3,yellow:2,red:1};
+  if(!keyStates[letter]||priority[color]>priority[keyStates[letter]]){
+    keyStates[letter]=color;
+    document.querySelectorAll(".key").forEach(k=>{
+      if(k.textContent.toLowerCase()===letter){
+        k.classList.remove("green","yellow","red");
+        k.classList.add(color);
+      }
+    });
+  }
+}
+
+function winGame(){
+  document.getElementById("resultText").textContent="MENANG!";
+  document.getElementById("rewardText").textContent="XP +100";
+  document.getElementById("resultScreen").style.display="flex";
+  confettiEffect();
+}
+
+function loseGame(){
+  document.getElementById("resultText").textContent="KALAH!";
+  document.getElementById("rewardText").textContent="Jawaban: "+answer.toUpperCase();
+  document.getElementById("resultScreen").style.display="flex";
+}
+
+function confettiEffect(){
+  for(let i=0;i<40;i++){
+    const conf=document.createElement("div");
+    conf.className="confetti";
+    conf.style.left=Math.random()*100+"vw";
+    conf.style.background=`hsl(${Math.random()*360},100%,50%)`;
+    document.body.appendChild(conf);
+    setTimeout(()=>conf.remove(),2000);
+  }
+}
+</script>
+</body>
+</html>
